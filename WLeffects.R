@@ -8,9 +8,10 @@ require(parallel)
 #################################################################################
 
 # select data file
-footie.data <- read.csv(file.choose(),header=T)
-footie.data
+esport.data <- WLdatalong
+esport.data
 
+# NEED TO EXTRACT DATE FROM begin_at
 add_zDays.onegroup=function(elodata.onegroup){
   allDays=c(elodata.onegroup$hDays,elodata.onegroup$aDays)
   mean.days=mean(allDays)
@@ -43,12 +44,13 @@ get_previous.outcome.predictions=function(model,parameter.indexes){
   return(prediction.dfs)
 }
 
-footie.data$Season=as.factor(footie.data$Season)
-footie.data=split(footie.data,f = footie.data$Season)
-footie.data=lapply(footie.data,add_zDays.onegroup)
-footie.data=do.call(rbind,footie.data)
-footie.data$index=seq(from=1,to=nrow(footie.data),by=1)
-footie.data
+# TREAT CALENDAR YEAR AS Season
+esport.data$Season=as.factor(esport.data$Season)
+esport.data=split(esport.data,f = esport.data$Season)
+esport.data=lapply(esport.data,add_zDays.onegroup)
+esport.data=do.call(rbind,esport.data)
+esport.data$index=seq(from=1,to=nrow(esport.data),by=1)
+esport.data
 
 
 ######################################################################################
@@ -57,47 +59,47 @@ footie.data
 ######################################################################################
 
 #choose either the home or away team to be the focal team in a particular game
-footie.data$assigned.focal=character(nrow(footie.data))
-for(i in 1:nrow(footie.data)){
+esport.data$assigned.focal=character(nrow(esport.data))
+for(i in 1:nrow(esport.data)){
   random=runif(n = 1,min = 0,max = 1)
   if(random==0.5){random=runif(n = 1,min = 0,max = 1)}
-  footie.data$assigned.focal[i]=ifelse(random>0.5,"h","a")
+  esport.data$assigned.focal[i]=ifelse(random>0.5,"h","a")
 }
 
-R=nrow(footie.data)
+R=nrow(esport.data)
 glmm.footiedata=vector(R,mode="list") 
 for(i in 1:R){
-  footie.data$seq=seq(from=1,to=nrow(footie.data),by=1)
-  previous.interactions=filter(footie.data,seq<i)
+  esport.data$seq=seq(from=1,to=nrow(esport.data),by=1)
+  previous.interactions=filter(esport.data,seq<i)
   
-  if(footie.data$assigned.focal[i]=="h"){
-    index=footie.data$index[i]
-    season=footie.data$Season[i]
-    tier=footie.data$tier[i]
-    result=footie.data$result[i]
-    focal=footie.data$home[i]
-    opponent=footie.data$visitor[i]
-    win.f=footie.data$hWin[i]
-    win.o=footie.data$aWin[i]
+  if(esport.data$assigned.focal[i]=="h"){
+    index=esport.data$index[i]
+    season=esport.data$Season[i]
+    tier=esport.data$tier[i]
+    result=esport.data$result[i]
+    focal=esport.data$home[i]
+    opponent=esport.data$visitor[i]
+    win.f=esport.data$hWin[i]
+    win.o=esport.data$aWin[i]
     home=1
-    margin=footie.data$margin[i]
-    zDays.f=footie.data$zDays.h[i]
-    zDays.o=footie.data$zDays.a[i]
+    margin=esport.data$margin[i]
+    zDays.f=esport.data$zDays.h[i]
+    zDays.o=esport.data$zDays.a[i]
     
     
   } else {
-    index=footie.data$index[i]
-    season=footie.data$Season[i]
-    tier=footie.data$tier[i]
-    result=footie.data$result[i]
-    focal=footie.data$visitor[i]
-    opponent=footie.data$home[i]
-    win.f=footie.data$aWin[i]
-    win.o=footie.data$hWin[i]
+    index=esport.data$index[i]
+    season=esport.data$Season[i]
+    tier=esport.data$tier[i]
+    result=esport.data$result[i]
+    focal=esport.data$visitor[i]
+    opponent=esport.data$home[i]
+    win.f=esport.data$aWin[i]
+    win.o=esport.data$hWin[i]
     home=0
-    margin=footie.data$margin[i]
-    zDays.f=footie.data$zDays.a[i]
-    zDays.o=footie.data$zDays.h[i]
+    margin=esport.data$margin[i]
+    zDays.f=esport.data$zDays.a[i]
+    zDays.o=esport.data$zDays.h[i]
     
     
   }
