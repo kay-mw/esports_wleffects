@@ -10,18 +10,22 @@ require(parallel)
 # select data file
 esport.data <- WLdatalong
 esport.data
+esport.data <- esport.data %>% arrange(desc(begin_at))
 
-# NEED TO EXTRACT DATE FROM begin_at
-add_zDays.onegroup=function(elodata.onegroup){
-  allDays=c(elodata.onegroup$hDays,elodata.onegroup$aDays)
-  mean.days=mean(allDays)
-  sd.days=sd(allDays)
-  
-  elodata.onegroup$zDays.h=(elodata.onegroup$hDays-mean.days)/sd.days
-  elodata.onegroup$zDays.a=(elodata.onegroup$aDays-mean.days)/sd.days
-  
-  return(elodata.onegroup)
-}
+# EXTRACT DATE AND TIME FROM begin_at
+esport.data <- esport.data %>% separate_wider_delim(begin_at, delim = "T", names = c("begin_date", "begin_time"))
+
+# FUNCTION TO Z-SCORE THE DAYS SINCE LAST CONTEST
+# add_zDays.onegroup=function(elodata.onegroup){
+#   allDays=c(elodata.onegroup$hDays,elodata.onegroup$aDays)
+#   mean.days=mean(allDays)
+#   sd.days=sd(allDays)
+#   
+#   elodata.onegroup$zDays.h=(elodata.onegroup$hDays-mean.days)/sd.days
+#   elodata.onegroup$zDays.a=(elodata.onegroup$aDays-mean.days)/sd.days
+#   
+#   return(elodata.onegroup)
+# }
 
 get_previous.outcome.predictions=function(model,parameter.indexes){
   n.poutcomes=length(parameter.indexes)
@@ -45,29 +49,29 @@ get_previous.outcome.predictions=function(model,parameter.indexes){
 }
 
 # TREAT CALENDAR YEAR AS Season
-esport.data$Season=as.factor(esport.data$Season)
+esport.data$Season=as.factor(format(as.Date(esport.data$begin_date, format="%Y-%m-%d"),"%Y"))
 esport.data=split(esport.data,f = esport.data$Season)
-esport.data=lapply(esport.data,add_zDays.onegroup)
+#esport.data=lapply(esport.data,add_zDays.onegroup)
 esport.data=do.call(rbind,esport.data)
 esport.data$index=seq(from=1,to=nrow(esport.data),by=1)
 esport.data
 
 
 ######################################################################################
-# Randomly assign either the home or the away team as the focal team and rearrange
-# the data sheet to reflect this
+# Randomly assign either team as the focal team and the other as the opponent and 
+# rearrange the data sheet to reflect this
 ######################################################################################
 
-#choose either the home or away team to be the focal team in a particular game
+#choose either opponent_0.id or opponent_1.id to be the focal team in a particular game
 esport.data$assigned.focal=character(nrow(esport.data))
 for(i in 1:nrow(esport.data)){
   random=runif(n = 1,min = 0,max = 1)
   if(random==0.5){random=runif(n = 1,min = 0,max = 1)}
-  esport.data$assigned.focal[i]=ifelse(random>0.5,"h","a")
+  esport.data$assigned.focal[i]=ifelse(random>0.5,"opp0","opp1")
 }
 
 R=nrow(esport.data)
-glmm.footiedata=vector(R,mode="list") 
+glmm.esportdata=vector(R,mode="list") 
 for(i in 1:R){
   esport.data$seq=seq(from=1,to=nrow(esport.data),by=1)
   previous.interactions=filter(esport.data,seq<i)
@@ -104,13 +108,13 @@ for(i in 1:R){
     
   }
   
-  glmm.footiedata[[i]]=data.frame(index,season,tier,result,focal,opponent,win.f,win.o,home,margin,zDays.f,zDays.o)
+  glmm.esportdata[[i]]=data.frame(index,season,tier,result,focal,opponent,win.f,win.o,home,margin,zDays.f,zDays.o)
 }
 
 
-glmm.footiedata=do.call(rbind,glmm.footiedata)
-glmm.footiedata=as_tibble(glmm.footiedata)
-glmm.footiedata
+glmm.esportdata=do.call(rbind,glmm.esportdata)
+glmm.esportdata=as_tibble(glmm.esportdata)
+glmm.esportdata
 
 
 #########################################################################################
@@ -175,12 +179,12 @@ previous_interaction=function(glmm.df,nth.previous){
   
 }
 
-glmm.footiedata$season=as.factor(glmm.footiedata$season)
-glmm.footiedata=split(glmm.footiedata,f = glmm.footiedata$season)
-glmm.footiedata=lapply(glmm.footiedata,previous_interaction,nth.previous=1)
-glmm.footiedata=do.call(rbind,glmm.footiedata)
-glmm.footiedata=as_tibble(glmm.footiedata)
-glmm.footiedata
+glmm.esportdata$season=as.factor(glmm.esportdata$season)
+glmm.esportdata=split(glmm.esportdata,f = glmm.esportdata$season)
+glmm.esportdata=lapply(glmm.esportdata,previous_interaction,nth.previous=1)
+glmm.esportdata=do.call(rbind,glmm.esportdata)
+glmm.esportdata=as_tibble(glmm.esportdata)
+glmm.esportdata
 
 
 
@@ -266,13 +270,13 @@ WUC_previous.outcome=function(oneseason.glmmdata,nth.previous.interaction){
 }
 
 
-glmm.footiedata=split(glmm.footiedata,f = glmm.footiedata$season)
-glmm.footiedata=lapply(glmm.footiedata,WUC_previous.outcome,nth.previous.interaction=1)
-glmm.footiedata=do.call(rbind,glmm.footiedata)
-glmm.footiedata=as.tibble(glmm.footiedata)
-glmm.footiedata
+glmm.esportdata=split(glmm.esportdata,f = glmm.esportdata$season)
+glmm.esportdata=lapply(glmm.esportdata,WUC_previous.outcome,nth.previous.interaction=1)
+glmm.esportdata=do.call(rbind,glmm.esportdata)
+glmm.esportdata=as.tibble(glmm.esportdata)
+glmm.esportdata
 
-glmm.footienodraws=subset(glmm.footiedata,result!="D")
+glmm.footienodraws=subset(glmm.esportdata,result!="D")
 glmm.footienodraws=as.tibble(glmm.footienodraws)
 glmm.footienodraws
 
@@ -280,7 +284,7 @@ glmm.footienodraws
 # first, model match outcomes as function of CURRENT situation
 model1=glmer(win.f~home+
                (1|focal)+(1|opponent),
-             family="binomial",data=glmm.footiedata,
+             family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
 )
 
@@ -294,7 +298,7 @@ model2=glmer(win.f~home+
                team.loss.mean.1.f+team.loss.dev.1.f+
                team.loss.mean.1.o+team.loss.dev.1.o+
                (1|focal)+(1|opponent),
-             family="binomial",data=glmm.footiedata,
+             family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
 )
 
@@ -307,7 +311,7 @@ model3=glmer(win.f~home+
                team.loss.mean.1.f+previous.1.home.f*team.loss.dev.1.f+
                team.loss.mean.1.o+previous.1.home.o*team.loss.dev.1.o+
                (1|focal)+(1|opponent),
-             family="binomial",data=glmm.footiedata,
+             family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
 )
 
@@ -320,7 +324,7 @@ model4=glmer(win.f~home+
                team.loss.mean.1.f+previous.1.margin.f*team.loss.dev.1.f+
                team.loss.mean.1.o+previous.1.margin.o*team.loss.dev.1.o+
                (1|focal)+(1|opponent),
-             family="binomial",data=glmm.footiedata,
+             family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
 )
 
@@ -334,7 +338,7 @@ model5=glmer(win.f~home+
                team.loss.mean.1.f+previous.1.home.f*previous.1.margin.f*team.loss.dev.1.f+
                team.loss.mean.1.o+previous.1.home.o*previous.1.margin.o*team.loss.dev.1.o+
                (1|focal)+(1|opponent),
-             family="binomial",data=glmm.footiedata,
+             family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
 )
 
