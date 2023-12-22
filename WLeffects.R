@@ -76,39 +76,35 @@ for(i in 1:R){
   esport.data$seq=seq(from=1,to=nrow(esport.data),by=1)
   previous.interactions=filter(esport.data,seq<i)
   
-  if(esport.data$assigned.focal[i]=="h"){
+  if(esport.data$assigned.focal[i]=="opp0"){
     index=esport.data$index[i]
     season=esport.data$Season[i]
-    tier=esport.data$tier[i]
-    result=esport.data$result[i]
-    focal=esport.data$home[i]
-    opponent=esport.data$visitor[i]
-    win.f=esport.data$hWin[i]
-    win.o=esport.data$aWin[i]
-    home=1
-    margin=esport.data$margin[i]
-    zDays.f=esport.data$zDays.h[i]
-    zDays.o=esport.data$zDays.a[i]
+    # tier=esport.data$tier[i]
+    winner=esport.data$game_winner_id[i]
+    focal=esport.data$opponent_0.id[i]
+    opponent=esport.data$opponent_1.id[i]
+    win.f=ifelse(esport.data$opponent_0.id[i]==esport.data$game_winner_id[i],1,0)
+    win.o=ifelse(esport.data$opponent_1.id[i]==esport.data$game_winner_id[i],1,0)
+    # zDays.f=esport.data$zDays.h[i]
+    # zDays.o=esport.data$zDays.a[i]
     
     
   } else {
     index=esport.data$index[i]
     season=esport.data$Season[i]
-    tier=esport.data$tier[i]
-    result=esport.data$result[i]
-    focal=esport.data$visitor[i]
-    opponent=esport.data$home[i]
-    win.f=esport.data$aWin[i]
-    win.o=esport.data$hWin[i]
-    home=0
-    margin=esport.data$margin[i]
-    zDays.f=esport.data$zDays.a[i]
-    zDays.o=esport.data$zDays.h[i]
+    # tier=esport.data$tier[i]
+    winner=esport.data$game_winner_id[i]
+    focal=esport.data$opponent_1.id[i]
+    opponent=esport.data$opponent_0.id[i]
+    win.f=ifelse(esport.data$opponent_1.id[i]==esport.data$game_winner_id[i],1,0)
+    win.o=ifelse(esport.data$opponent_0.id[i]==esport.data$game_winner_id[i],1,0)
+    # zDays.f=esport.data$zDays.a[i]
+    # zDays.o=esport.data$zDays.h[i]
     
     
   }
   
-  glmm.esportdata[[i]]=data.frame(index,season,tier,result,focal,opponent,win.f,win.o,home,margin,zDays.f,zDays.o)
+  glmm.esportdata[[i]]=data.frame(index,season,winner,focal,opponent,win.f,win.o)
 }
 
 
