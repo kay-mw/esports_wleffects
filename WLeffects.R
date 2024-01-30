@@ -2,6 +2,8 @@ require(tidyverse)
 require(lme4)
 require(MCMCglmm)
 require(parallel)
+require(data.table)
+require(anytime)
 
 #################################################################################
 # read data file  ###############################################################
@@ -69,6 +71,138 @@ for(i in 1:nrow(esport.data)){
   if(random==0.5){random=runif(n = 1,min = 0,max = 1)}
   esport.data$assigned.focal[i]=ifelse(random>0.5,"opp0","opp1")
 }
+
+######################################################################################
+# Deal with currency column
+######################################################################################
+
+# separate prize pool amount and currency
+esport.data <- separate(esport.data, tournament.prizepool, into = c(
+  "tournament.prizepool.amount", "tournament.prizepool.currency"
+  ), sep = "\\s", extra = "merge")
+
+# convert prize pool amount column to int datatype
+esport.data <- esport.data %>% mutate(across(tournament.prizepool.amount, as.integer))
+
+# identify if separation worked as intended
+unique(esport.data$tournament.prizepool.currency)
+
+# saw that some values of United States Dollar had extra white space, so trim is necessary
+esport.data$tournament.prizepool.currency <- trimws(esport.data$tournament.prizepool.currency)
+
+# convert currency string to relevant abbreviation
+esport.data <- esport.data %>%
+  mutate(tournament.prizepool.currencycode = case_when(
+    tournament.prizepool.currency == "United States Dollar" ~ "USD",
+    tournament.prizepool.currency == "Chinese Yuan" ~ "CNY",
+    tournament.prizepool.currency == "Euro" ~ "EUR",
+    tournament.prizepool.currency == "Brazilian Real" ~ "BRL",
+    tournament.prizepool.currency == "Polish Zloty" ~ "PLN",
+    tournament.prizepool.currency == "Indian Rupee" ~ "INR",
+    tournament.prizepool.currency == "Swedish Krona" ~ "SEK",
+    tournament.prizepool.currency == "British Pound"  ~ "GBP",
+    tournament.prizepool.currency == "Kazakhstani Tenge" ~ "KZT",
+    tournament.prizepool.currency == "Russian Ruble" ~ "RUB",
+    tournament.prizepool.currency == "Argentine Peso" ~ "ARS",
+    tournament.prizepool.currency == "Norwegian Krone" ~ "NOK",
+    tournament.prizepool.currency == "Danish Krone" ~ "DKK",
+    tournament.prizepool.currency == "Czech Koruna" ~ "CZK",
+    tournament.prizepool.currency == "Australian Dollar" ~ "AUD",
+    tournament.prizepool.currency == "Swiss Franc" ~ "CHF",
+    tournament.prizepool.currency == "Turkish Lira" ~ "TRY",
+    tournament.prizepool.currency == "Japanese Yen" ~ "JPY",
+    tournament.prizepool.currency == "Croatian Kuna"  ~ "HRK",
+    tournament.prizepool.currency == "Vietnamese Dong" ~ "VND",
+    tournament.prizepool.currency == "Icelandic Krona" ~ "ISK",
+    tournament.prizepool.currency == "Qatari Riyal" ~ "QAR",
+    tournament.prizepool.currency == "Mongolian Togrog" ~ "MNT",
+    tournament.prizepool.currency == "Ukrainian Hryvnia" ~ "UAH",
+    tournament.prizepool.currency == "Iranian Rial" ~ "IRR",
+    tournament.prizepool.currency == "South African Rand" ~ "ZAR",
+    tournament.prizepool.currency == "Serbian Dinar" ~ "RSD",
+    tournament.prizepool.currency == "Bulgarian Lev" ~ "BGN",
+    TRUE ~ tournament.prizepool.currency # Keep original value if no match.
+  )
+)
+
+# Check that it worked
+unique(esport.data$tournament.prizepool.currencycode)
+
+######################################################################################
+# Import and clean historical exchange rate data
+######################################################################################
+
+# Read historical exchange rates data
+historical_exchange_rates <- fread("historical_exchange_rates.csv")
+
+# Separate currency abbreviaton from full name
+historical_exchange_rates <- separate(historical_exchange_rates, "CURRENCY:Currency", 
+into = c("currency_code", "currency_name"), sep = ":", extra = "merge")
+
+# Check if all currencies are supported. All are except Croatian Kuna.
+unique(historical_exchange_rates$currency_code)
+
+# This isn't really a huge deal though because only two rows contain prize money in Croatian Kuna.
+length(which(esport.data$tournament.prizepool.currencycode == "HRK"))
+
+# Remove HRK (Croatian Kuna) from esport.data as there is no conversion data for it
+esport.data <- esport.data %>%
+  filter(!(tournament.prizepool.currencycode == "HRK" & !is.na(tournament.prizepool.amount)))
+
+# Create a list of currency codes in esport.data
+valid_currency_codes <- c("USD", "CNY", "EUR", "BRL", "PLN", "INR", "SEK", "GBP", 
+                          "KZT", "RUB", "ARS", "NOK", "DKK", "CZK", "AUD", "CHF", 
+                          "TRY", "JPY", "HRK", "VND", "ISK", "QAR", "MNT", "UAH", 
+                          "IRR", "ZAR", "RSD", "BGN")
+
+# Filter historical_exchange_rates to keep only rows with currencies in this list
+filtered_exchange_rates <- historical_exchange_rates %>%
+  filter(currency_code %in% valid_currency_codes)
+
+# Convert the "begin_date" column to a Date object in esport.data
+esport.data$begin_date <- as.Date(esport.data$begin_date)
+
+# As date column in exchange rates dataset has inconsistent dates, use function to standardise format
+filtered_exchange_rates$consistent_date <- anytime(filtered_exchange_rates$`TIME_PERIOD:Time period or range`)
+
+view(head(filtered_exchange_rates, 100))
+
+######################################################################################
+# Join datasets to convert currency values
+######################################################################################
+
+# Select a subset of 10000 rows from esport.data
+subset_esport.data <- slice(esport.data, 1:10000)
+subset_filtered_exchange_rates <- slice(filtered_exchange_rates, 1:10000)
+
+# Merge the datasets through matching currency codes
+# Filter so that only exchange rate dates later than begin_date can be used
+merged_data <- subset_esport.data %>%
+  left_join(subset_filtered_exchange_rates, by = c("tournament.prizepool.currencycode" = "currency_code")) %>%
+  filter(begin_date <= consistent_date)
+
+# Inspect the merged dataset to see if it worked ok (keeping in mind it just used a subset of 10000 rows)
+view(head(merged_data, 100))
+
+unique(merged_data$tournament.prizepool.currencycode)
+
+min(merged_data$consistent_date)
+max(merged_data$consistent_date)
+
+# Convert prizepool amounts to USD using the exchange rates
+merged_data <- mutate(merged_data, prizepool_usd = tournament.prizepool.amount / `OBS_VALUE:Observation Value`)
+
+# view data to inspect if conversion worked
+filter_test <- merged_data %>% filter(tournament.prizepool.currencycode != "USD")
+
+view(head(filter_test, 100))
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
 
 R=nrow(esport.data)
 glmm.esportdata=vector(R,mode="list") 
