@@ -163,7 +163,8 @@ filtered_exchange_rates <- historical_exchange_rates %>%
 esport.data$begin_date <- as.Date(esport.data$begin_date)
 
 # As date column in exchange rates dataset has inconsistent dates, use function to standardise format
-filtered_exchange_rates$consistent_date <- anytime(filtered_exchange_rates$`TIME_PERIOD:Time period or range`)
+filtered_exchange_rates$consistent_date <- as.Date(anytime(filtered_exchange_rates$`TIME_PERIOD:Time period or range`))
+filtered_exchange_rates <- subset(filtered_exchange_rates,lubridate::year(consistent_date)>2015)
 
 view(head(filtered_exchange_rates, 100))
 

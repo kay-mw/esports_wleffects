@@ -1,7 +1,8 @@
 url <- "https://data.bis.org/static/bulk/WS_XRU_csv_flat.zip"
 file_name <- "WS_XRU_csv_flat.zip"
-file_path <- "/workspaces/esports_WLeffects/"
 
-download.file(url, paste(file_path, file_name, sep = ""), mode = "wb")
+download.file(url, paste(file_name, sep = ""), mode = "wb")
 
-unzip(file_name, exdir=file_path)
+unzip(file_name)
+
+file.rename("WS_XRU_csv_flat.csv","historical_exchange_rates.csv")
