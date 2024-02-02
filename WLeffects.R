@@ -172,23 +172,18 @@ view(head(filtered_exchange_rates, 100))
 # Join datasets to convert currency values
 ######################################################################################
 
-# Select a subset of 10000 rows from esport.data
-subset_esport.data <- slice(esport.data, 1:10000)
-subset_filtered_exchange_rates <- slice(filtered_exchange_rates, 1:10000)
+merged_data <- esport.data %>%
+  left_join(filtered_exchange_rates, join_by("tournament.prizepool.currencycode" == "currency_code", closest(begin_date <= consistent_date)))
 
-# Merge the datasets through matching currency codes
-# Filter so that only exchange rate dates later than begin_date can be used
-merged_data <- subset_esport.data %>%
-  left_join(subset_filtered_exchange_rates, by = c("tournament.prizepool.currencycode" = "currency_code")) %>%
-  filter(begin_date <= consistent_date)
-
-# Inspect the merged dataset to see if it worked ok (keeping in mind it just used a subset of 10000 rows)
+# Inspect the merged dataset
 view(head(merged_data, 100))
 
-unique(merged_data$tournament.prizepool.currencycode)
+# Make a column based on date diff calculation
+merged_data$date_diff <- difftime(merged_data$begin_date, merged_data$consistent_date, units = "days")
 
-min(merged_data$consistent_date)
-max(merged_data$consistent_date)
+# Check it worked properly, seems like it worked perfectly (max is 0 days, min is -25 days)
+max(na.omit(merged_data$date_diff))
+min(na.omit(merged_data$date_diff))
 
 # Convert prizepool amounts to USD using the exchange rates
 merged_data <- mutate(merged_data, prizepool_usd = tournament.prizepool.amount / `OBS_VALUE:Observation Value`)
