@@ -192,7 +192,7 @@ max(na.omit(merged_data$date_diff))
 min(na.omit(merged_data$date_diff))
 
 # Convert prizepool amounts to USD using the exchange rates
-merged_data <- mutate(merged_data, prizepool_usd = tournament.prizepool.amount / `OBS_VALUE:Observation Value`)
+merged_data <- mutate(merged_data, prizepool_usd = tournament.prizepool.amount / ObsValue)
 
 # view data to inspect if conversion worked
 filter_test <- merged_data %>% filter(tournament.prizepool.currencycode != "USD")
@@ -215,12 +215,18 @@ for(i in 1:R){
   if(merged_data$assigned.focal[i]=="opp0"){
     index=merged_data$index[i]
     season=merged_data$Season[i]
-    # tier=merged_data$tier[i]
+    tournament=merged_data$tournament_id[i]
+    stage=merged_data$tournament.name[i]
+    match=merged_data$id[i]
+    money=merged_data$prizepool_usd[i]
+    tier=merged_data$tournament.tier[i]
     winner=merged_data$game_winner_id[i]
     focal=merged_data$opponent_0.id[i]
     opponent=merged_data$opponent_1.id[i]
     win.f=ifelse(merged_data$opponent_0.id[i]==merged_data$game_winner_id[i],1,0)
     win.o=ifelse(merged_data$opponent_1.id[i]==merged_data$game_winner_id[i],1,0)
+    location.f=merged_data$opponent_0.location[i]
+    location.o=merged_data$opponent_1.location[i]
     # zDays.f=merged_data$zDays.h[i]
     # zDays.o=merged_data$zDays.a[i]
     
@@ -228,19 +234,25 @@ for(i in 1:R){
   } else {
     index=merged_data$index[i]
     season=merged_data$Season[i]
-    # tier=merged_data$tier[i]
+    tournament=merged_data$tournament_id[i]
+    stage=merged_data$tournament.name[i]
+    match=merged_data$id[i]
+    money=merged_data$prizepool_usd[i]
+    tier=merged_data$tournament.tier[i]
     winner=merged_data$game_winner_id[i]
     focal=merged_data$opponent_1.id[i]
     opponent=merged_data$opponent_0.id[i]
     win.f=ifelse(merged_data$opponent_1.id[i]==merged_data$game_winner_id[i],1,0)
     win.o=ifelse(merged_data$opponent_0.id[i]==merged_data$game_winner_id[i],1,0)
+    location.f=merged_data$opponent_1.location[i]
+    location.o=merged_data$opponent_0.location[i]
     # zDays.f=merged_data$zDays.a[i]
     # zDays.o=merged_data$zDays.h[i]
     
     
   }
   
-  glmm.esportdata[[i]]=data.frame(index,season,winner,focal,opponent,win.f,win.o)
+  glmm.esportdata[[i]]=data.frame(index,season,tournament,stage,match,money,tier,winner,focal,opponent,win.f,win.o,location.f,location.o)
 }
 
 
