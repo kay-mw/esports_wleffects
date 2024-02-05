@@ -166,14 +166,20 @@ esport.data$begin_date <- as.Date(esport.data$begin_date)
 filtered_exchange_rates$consistent_date <- as.Date(anytime(filtered_exchange_rates$`TIME_PERIOD:Time period or range`))
 filtered_exchange_rates <- subset(filtered_exchange_rates,lubridate::year(consistent_date)>2015)
 
-view(head(filtered_exchange_rates, 100))
+# extract relevant columns
+exchange <- filtered_exchange_rates[c("currency_code","OBS_VALUE:Observation Value","consistent_date")]
+exchange <- exchange %>% rename(ObsValue=`OBS_VALUE:Observation Value`)
+exchange$ObsValue <- ifelse(exchange$ObsValue=="NaN",NA,exchange$ObsValue)
+exchange <- exchange %>% distinct(currency_code, consistent_date, .keep_all = TRUE)
+
+view(head(exchange, 100))
 
 ######################################################################################
 # Join datasets to convert currency values
 ######################################################################################
 
 merged_data <- esport.data %>%
-  left_join(filtered_exchange_rates, join_by("tournament.prizepool.currencycode" == "currency_code", closest(begin_date <= consistent_date)))
+  left_join(exchange, join_by("tournament.prizepool.currencycode" == "currency_code", closest(begin_date <= consistent_date)))
 
 # Inspect the merged dataset
 view(head(merged_data, 100))
@@ -201,35 +207,35 @@ view(head(filter_test, 100))
 #########################################################################################################
 
 R=nrow(esport.data)
-glmm.esportdata=vector(R,mode="list") 
+glmm.esportdata=vector(R,mode="list")
 for(i in 1:R){
-  esport.data$seq=seq(from=1,to=nrow(esport.data),by=1)
-  previous.interactions=filter(esport.data,seq<i)
+  merged_data$seq=seq(from=1,to=nrow(esport.data),by=1)
+  previous.interactions=filter(merged_data,seq<i)
   
-  if(esport.data$assigned.focal[i]=="opp0"){
-    index=esport.data$index[i]
-    season=esport.data$Season[i]
-    # tier=esport.data$tier[i]
-    winner=esport.data$game_winner_id[i]
-    focal=esport.data$opponent_0.id[i]
-    opponent=esport.data$opponent_1.id[i]
-    win.f=ifelse(esport.data$opponent_0.id[i]==esport.data$game_winner_id[i],1,0)
-    win.o=ifelse(esport.data$opponent_1.id[i]==esport.data$game_winner_id[i],1,0)
-    # zDays.f=esport.data$zDays.h[i]
-    # zDays.o=esport.data$zDays.a[i]
+  if(merged_data$assigned.focal[i]=="opp0"){
+    index=merged_data$index[i]
+    season=merged_data$Season[i]
+    # tier=merged_data$tier[i]
+    winner=merged_data$game_winner_id[i]
+    focal=merged_data$opponent_0.id[i]
+    opponent=merged_data$opponent_1.id[i]
+    win.f=ifelse(merged_data$opponent_0.id[i]==merged_data$game_winner_id[i],1,0)
+    win.o=ifelse(merged_data$opponent_1.id[i]==merged_data$game_winner_id[i],1,0)
+    # zDays.f=merged_data$zDays.h[i]
+    # zDays.o=merged_data$zDays.a[i]
     
     
   } else {
-    index=esport.data$index[i]
-    season=esport.data$Season[i]
-    # tier=esport.data$tier[i]
-    winner=esport.data$game_winner_id[i]
-    focal=esport.data$opponent_1.id[i]
-    opponent=esport.data$opponent_0.id[i]
-    win.f=ifelse(esport.data$opponent_1.id[i]==esport.data$game_winner_id[i],1,0)
-    win.o=ifelse(esport.data$opponent_0.id[i]==esport.data$game_winner_id[i],1,0)
-    # zDays.f=esport.data$zDays.a[i]
-    # zDays.o=esport.data$zDays.h[i]
+    index=merged_data$index[i]
+    season=merged_data$Season[i]
+    # tier=merged_data$tier[i]
+    winner=merged_data$game_winner_id[i]
+    focal=merged_data$opponent_1.id[i]
+    opponent=merged_data$opponent_0.id[i]
+    win.f=ifelse(merged_data$opponent_1.id[i]==merged_data$game_winner_id[i],1,0)
+    win.o=ifelse(merged_data$opponent_0.id[i]==merged_data$game_winner_id[i],1,0)
+    # zDays.f=merged_data$zDays.a[i]
+    # zDays.o=merged_data$zDays.h[i]
     
     
   }
