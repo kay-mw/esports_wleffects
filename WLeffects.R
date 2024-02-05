@@ -182,7 +182,7 @@ merged_data <- esport.data %>%
   left_join(exchange, join_by("tournament.prizepool.currencycode" == "currency_code", closest(begin_date <= consistent_date)))
 
 # Inspect the merged dataset
-view(head(merged_data, 100))
+# view(head(merged_data, 100))
 
 # Make a column based on date diff calculation
 merged_data$date_diff <- difftime(merged_data$begin_date, merged_data$consistent_date, units = "days")
@@ -197,7 +197,7 @@ merged_data <- mutate(merged_data, prizepool_usd = tournament.prizepool.amount /
 # view data to inspect if conversion worked
 filter_test <- merged_data %>% filter(tournament.prizepool.currencycode != "USD")
 
-view(head(filter_test, 100))
+# view(head(filter_test, 100))
 
 #########################################################################################################
 #########################################################################################################
@@ -206,10 +206,13 @@ view(head(filter_test, 100))
 #########################################################################################################
 #########################################################################################################
 
-R=nrow(esport.data)
+#take first 10000 rows
+merged_data <- merged_data[1:10000,]
+
+R=nrow(merged_data)
 glmm.esportdata=vector(R,mode="list")
 for(i in 1:R){
-  merged_data$seq=seq(from=1,to=nrow(esport.data),by=1)
+  merged_data$seq=seq(from=1,to=nrow(merged_data),by=1)
   previous.interactions=filter(merged_data,seq<i)
   
   if(merged_data$assigned.focal[i]=="opp0"){
@@ -273,10 +276,8 @@ previous_interaction=function(glmm.df,nth.previous){
   previouswin.o=numeric(R)
   previousloss.f=numeric(R)
   previousloss.o=numeric(R)
-  previoushome.f=numeric(R)
-  previoushome.o=numeric(R)
-  previousmargin.f=numeric(R)
-  previousmargin.o=numeric(R)
+  previousmoney.f=numeric(R)
+  previousmoney.o=numeric(R)
   for(i in 1:R){
     team.f=as.character(glmm.df$focal[i])
     team.o=as.character(glmm.df$opponent[i])
@@ -288,37 +289,31 @@ previous_interaction=function(glmm.df,nth.previous){
       nth.last.interaction=previous.games.f[nrow(previous.games.f)-(nth.previous-1),] #select the previous nth game
       previouswin.f[i]=ifelse(nth.last.interaction$focal==team.f&nth.last.interaction$win.f==1&nth.last.interaction$win.o==0|nth.last.interaction$opponent==team.f&nth.last.interaction$win.f==0&nth.last.interaction$win.o==1,1,0)
       previousloss.f[i]=ifelse(nth.last.interaction$focal==team.f&nth.last.interaction$win.f==0&nth.last.interaction$win.o==1|nth.last.interaction$opponent==team.f&nth.last.interaction$win.f==1&nth.last.interaction$win.o==0,1,0)
-      previoushome.f[i]=ifelse(nth.last.interaction$focal==team.f,nth.last.interaction$home,1-nth.last.interaction$home)
-      previousmargin.f[i]=nth.last.interaction$margin
+      previousmoney.f[i]=nth.last.interaction$money
     } else {
       previouswin.f[i]=NA
       previousloss.f[i]=NA
-      previoushome.f[i]=NA
-      previousmargin.f[i]=NA
+      previousmoney.f[i]=NA
     }
     
     if(nrow(previous.games.o)>=nth.previous){
       nth.last.interaction=previous.games.o[nrow(previous.games.o)-(nth.previous-1),] #select the previous nth game
       previouswin.o[i]=ifelse(nth.last.interaction$focal==team.o&nth.last.interaction$win.f==1&nth.last.interaction$win.o==0|nth.last.interaction$opponent==team.o&nth.last.interaction$win.f==0&nth.last.interaction$win.o==1,1,0)
       previousloss.o[i]=ifelse(nth.last.interaction$focal==team.o&nth.last.interaction$win.f==0&nth.last.interaction$win.o==1|nth.last.interaction$opponent==team.o&nth.last.interaction$win.f==1&nth.last.interaction$win.o==0,1,0)
-      previoushome.o[i]=ifelse(nth.last.interaction$focal==team.o,nth.last.interaction$home,1-nth.last.interaction$home)
-      previousmargin.o[i]=nth.last.interaction$margin
+      previousmoney.o[i]=nth.last.interaction$money
     } else {
       previouswin.o[i]=NA
       previousloss.o[i]=NA
-      previoushome.o[i]=NA
-      previousmargin.o[i]=NA
+      previousmoney.o[i]=NA
     }
   }
-  new.glmm.df=data.frame(glmm.df,previouswin.f,previouswin.o,previousloss.f,previousloss.o,previoushome.f,previoushome.o,previousmargin.f,previousmargin.o)
+  new.glmm.df=data.frame(glmm.df,previouswin.f,previouswin.o,previousloss.f,previousloss.o,previousmoney.f,previousmoney.o)
   names(new.glmm.df)[ncol(glmm.df)+1]=paste("previous",nth.previous,"win.f",sep=".")
   names(new.glmm.df)[ncol(glmm.df)+2]=paste("previous",nth.previous,"win.o",sep=".")
   names(new.glmm.df)[ncol(glmm.df)+3]=paste("previous",nth.previous,"loss.f",sep=".")
   names(new.glmm.df)[ncol(glmm.df)+4]=paste("previous",nth.previous,"loss.o",sep=".")
-  names(new.glmm.df)[ncol(glmm.df)+5]=paste("previous",nth.previous,"home.f",sep=".")
-  names(new.glmm.df)[ncol(glmm.df)+6]=paste("previous",nth.previous,"home.o",sep=".")
-  names(new.glmm.df)[ncol(glmm.df)+7]=paste("previous",nth.previous,"margin.f",sep=".")
-  names(new.glmm.df)[ncol(glmm.df)+8]=paste("previous",nth.previous,"margin.o",sep=".")
+  names(new.glmm.df)[ncol(glmm.df)+5]=paste("previous",nth.previous,"money.f",sep=".")
+  names(new.glmm.df)[ncol(glmm.df)+6]=paste("previous",nth.previous,"money.o",sep=".")
   return(new.glmm.df)
   
 }
