@@ -286,6 +286,8 @@ GDP_merge <- GDP_long %>% left_join(historical_exchange_rates, join_by("country_
 
 GDP_merge <- GDP_merge[c("country_code", "country_name", "year", "GDP")]
 
+GDP_merge <- GDP_merge[!is.na(GDP_merge$country_code),]
+
 # Process merged esport.data
 merged_data$year <- format(as.Date(merged_data$begin_date, format ="%Y/%m/%d"), "%Y")
 
