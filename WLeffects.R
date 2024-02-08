@@ -200,7 +200,6 @@ merged_data <- merged_data %>% mutate(tournament.stage = case_when(
   grepl("Final", tournament.name) ~ "Finals",
   grepl("final", tournament.name) ~ "Finals",
   grepl("Qualifier", tournament.name) ~ "Qualifiers",
-  grepl("Qualifier", tournament.name) ~ "Qualifiers",
   grepl("Play-In", tournament.name) ~ "Play-Ins",
   grepl("Play-in", tournament.name) ~ "Play-Ins",
   grepl("Regular Season", tournament.name) ~ "Regular Season",
@@ -212,7 +211,7 @@ merged_data <- merged_data %>% mutate(tournament.stage = case_when(
 
 unique(merged_data$tournament.stage)
 
-view(head(merged_data, 10000))
+# view(head(merged_data, 10000))
 
 ######################################################################################
 # Import, transform and merge GDP per capita data
@@ -305,7 +304,7 @@ main_GDP_merge$opp1_year <- secondary_GDP_merge$year
 main_GDP_merge$opp1_country_name <- secondary_GDP_merge$country_name
 main_GDP_merge$opp1_GDP <- secondary_GDP_merge$GDP
 
-view(head(main_GDP_merge, 1000))
+# view(head(main_GDP_merge, 1000))
 
 # Now just need to add GDP data to this dataframe below.
 
@@ -313,55 +312,61 @@ view(head(main_GDP_merge, 1000))
 # Create new dataframe
 ######################################################################################
 
-merged_data <- merged_data[1:10000,]
+main_GDP_merge <- main_GDP_merge[1:10000,]
 
-R=nrow(merged_data)
+R=nrow(main_GDP_merge)
 glmm.esportdata=vector(R,mode="list")
 for(i in 1:R){
-  merged_data$seq=seq(from=1,to=nrow(merged_data),by=1)
-  previous.interactions=filter(merged_data,seq<i)
+  main_GDP_merge$seq=seq(from=1,to=nrow(main_GDP_merge),by=1)
+  previous.interactions=filter(main_GDP_merge,seq<i)
   
-  if(merged_data$assigned.focal[i]=="opp0"){
-    index=merged_data$index[i]
-    season=merged_data$Season[i]
-    tournament=merged_data$tournament_id[i]
-    stage=merged_data$tournament.stage[i]
-    match=merged_data$id[i]
-    money=merged_data$prizepool_usd[i]
-    tier=merged_data$tournament.tier[i]
-    winner=merged_data$game_winner_id[i]
-    focal=merged_data$opponent_0.id[i]
-    opponent=merged_data$opponent_1.id[i]
-    win.f=ifelse(merged_data$opponent_0.id[i]==merged_data$game_winner_id[i],1,0)
-    win.o=ifelse(merged_data$opponent_1.id[i]==merged_data$game_winner_id[i],1,0)
-    location.f=merged_data$opponent_0.location[i]
-    location.o=merged_data$opponent_1.location[i]
-    # zDays.f=merged_data$zDays.h[i]
-    # zDays.o=merged_data$zDays.a[i]
+  if(main_GDP_merge$assigned.focal[i]=="opp0"){
+    index=main_GDP_merge$index[i]
+    season=main_GDP_merge$Season[i]
+    tournament=main_GDP_merge$tournament_id[i]
+    stage=main_GDP_merge$tournament.stage[i]
+    match=main_GDP_merge$id[i]
+    money=main_GDP_merge$prizepool_usd[i]
+    money=ifelse(is.na(money),0,money)
+    tier=main_GDP_merge$tournament.tier[i]
+    winner=main_GDP_merge$game_winner_id[i]
+    focal=main_GDP_merge$opponent_0.id[i]
+    opponent=main_GDP_merge$opponent_1.id[i]
+    win.f=ifelse(main_GDP_merge$opponent_0.id[i]==main_GDP_merge$game_winner_id[i],1,0)
+    win.o=ifelse(main_GDP_merge$opponent_1.id[i]==main_GDP_merge$game_winner_id[i],1,0)
+    location.f=main_GDP_merge$opponent_0.location[i]
+    location.o=main_GDP_merge$opponent_1.location[i]
+    GDP.f=main_GDP_merge$opp0_GDP[i]
+    GDP.o=main_GDP_merge$opp1_GDP[i]
+    # zDays.f=main_GDP_merge$zDays.h[i]
+    # zDays.o=main_GDP_merge$zDays.a[i]
     
     
   } else {
-    index=merged_data$index[i]
-    season=merged_data$Season[i]
-    tournament=merged_data$tournament_id[i]
-    stage=merged_data$tournament.stage[i]
-    match=merged_data$id[i]
-    money=merged_data$prizepool_usd[i]
-    tier=merged_data$tournament.tier[i]
-    winner=merged_data$game_winner_id[i]
-    focal=merged_data$opponent_1.id[i]
-    opponent=merged_data$opponent_0.id[i]
-    win.f=ifelse(merged_data$opponent_1.id[i]==merged_data$game_winner_id[i],1,0)
-    win.o=ifelse(merged_data$opponent_0.id[i]==merged_data$game_winner_id[i],1,0)
-    location.f=merged_data$opponent_1.location[i]
-    location.o=merged_data$opponent_0.location[i]
-    # zDays.f=merged_data$zDays.a[i]
-    # zDays.o=merged_data$zDays.h[i]
+    index=main_GDP_merge$index[i]
+    season=main_GDP_merge$Season[i]
+    tournament=main_GDP_merge$tournament_id[i]
+    stage=main_GDP_merge$tournament.stage[i]
+    match=main_GDP_merge$id[i]
+    money=main_GDP_merge$prizepool_usd[i]
+    money=ifelse(is.na(money),0,money)
+    tier=main_GDP_merge$tournament.tier[i]
+    winner=main_GDP_merge$game_winner_id[i]
+    focal=main_GDP_merge$opponent_1.id[i]
+    opponent=main_GDP_merge$opponent_0.id[i]
+    win.f=ifelse(main_GDP_merge$opponent_1.id[i]==main_GDP_merge$game_winner_id[i],1,0)
+    win.o=ifelse(main_GDP_merge$opponent_0.id[i]==main_GDP_merge$game_winner_id[i],1,0)
+    location.f=main_GDP_merge$opponent_1.location[i]
+    location.o=main_GDP_merge$opponent_0.location[i]
+    GDP.f=main_GDP_merge$opp1_GDP[i]
+    GDP.o=main_GDP_merge$opp0_GDP[i]
+    # zDays.f=main_GDP_merge$zDays.a[i]
+    # zDays.o=main_GDP_merge$zDays.h[i]
     
     
   }
   
-  glmm.esportdata[[i]]=data.frame(index,season,tournament,stage,match,money,tier,winner,focal,opponent,win.f,win.o,location.f,location.o)
+  glmm.esportdata[[i]]=data.frame(index,season,tournament,stage,match,money,tier,winner,focal,opponent,win.f,win.o,location.f,location.o,GDP.f,GDP.o)
 }
 
 
@@ -369,7 +374,7 @@ glmm.esportdata=do.call(rbind,glmm.esportdata)
 glmm.esportdata=as_tibble(glmm.esportdata)
 glmm.esportdata
 
-view(head(glmm.esportdata, 100))
+# view(head(glmm.esportdata, 100))
 
 
 #########################################################################################
@@ -386,6 +391,8 @@ previous_interaction=function(glmm.df,nth.previous){
   previousloss.o=numeric(R)
   previousmoney.f=numeric(R)
   previousmoney.o=numeric(R)
+  previousGDP.f=numeric(R)
+  previousGDP.o=numeric(R)
   for(i in 1:R){
     team.f=as.character(glmm.df$focal[i])
     team.o=as.character(glmm.df$opponent[i])
@@ -395,33 +402,39 @@ previous_interaction=function(glmm.df,nth.previous){
     
     if(nrow(previous.games.f)>=nth.previous){
       nth.last.interaction=previous.games.f[nrow(previous.games.f)-(nth.previous-1),] #select the previous nth game
-      previouswin.f[i]=ifelse(nth.last.interaction$focal==team.f&nth.last.interaction$win.f==1&nth.last.interaction$win.o==0|nth.last.interaction$opponent==team.f&nth.last.interaction$win.f==0&nth.last.interaction$win.o==1,1,0)
-      previousloss.f[i]=ifelse(nth.last.interaction$focal==team.f&nth.last.interaction$win.f==0&nth.last.interaction$win.o==1|nth.last.interaction$opponent==team.f&nth.last.interaction$win.f==1&nth.last.interaction$win.o==0,1,0)
+      previouswin.f[i]=ifelse(nth.last.interaction$focal==team.f&nth.last.interaction$win.f==1|nth.last.interaction$opponent==team.f&nth.last.interaction$win.o==1,1,0)
+      previousloss.f[i]=ifelse(nth.last.interaction$focal==team.f&nth.last.interaction$win.f==0|nth.last.interaction$opponent==team.f&nth.last.interaction$win.o==0,1,0)
       previousmoney.f[i]=nth.last.interaction$money
+      previousGDP.f[i]=ifelse(nth.last.interaction$focal==team.f,nth.last.interaction$GDP.f,nth.last.interaction$GDP.o)
     } else {
       previouswin.f[i]=NA
       previousloss.f[i]=NA
       previousmoney.f[i]=NA
+      previousGDP.f[i]=NA
     }
     
     if(nrow(previous.games.o)>=nth.previous){
       nth.last.interaction=previous.games.o[nrow(previous.games.o)-(nth.previous-1),] #select the previous nth game
-      previouswin.o[i]=ifelse(nth.last.interaction$focal==team.o&nth.last.interaction$win.f==1&nth.last.interaction$win.o==0|nth.last.interaction$opponent==team.o&nth.last.interaction$win.f==0&nth.last.interaction$win.o==1,1,0)
-      previousloss.o[i]=ifelse(nth.last.interaction$focal==team.o&nth.last.interaction$win.f==0&nth.last.interaction$win.o==1|nth.last.interaction$opponent==team.o&nth.last.interaction$win.f==1&nth.last.interaction$win.o==0,1,0)
+      previouswin.o[i]=ifelse(nth.last.interaction$focal==team.o&nth.last.interaction$win.f==1|nth.last.interaction$opponent==team.o&nth.last.interaction$win.o==1,1,0)
+      previousloss.o[i]=ifelse(nth.last.interaction$focal==team.o&nth.last.interaction$win.f==0|nth.last.interaction$opponent==team.o&nth.last.interaction$win.o==0,1,0)
       previousmoney.o[i]=nth.last.interaction$money
+      previousGDP.o[i]=ifelse(nth.last.interaction$focal==team.o,nth.last.interaction$GDP.f,nth.last.interaction$GDP.o)
     } else {
       previouswin.o[i]=NA
       previousloss.o[i]=NA
       previousmoney.o[i]=NA
+      previousGDP.o[i]=NA
     }
   }
-  new.glmm.df=data.frame(glmm.df,previouswin.f,previouswin.o,previousloss.f,previousloss.o,previousmoney.f,previousmoney.o)
+  new.glmm.df=data.frame(glmm.df,previouswin.f,previouswin.o,previousloss.f,previousloss.o,previousmoney.f,previousmoney.o,previousGDP.f,previousGDP.o)
   names(new.glmm.df)[ncol(glmm.df)+1]=paste("previous",nth.previous,"win.f",sep=".")
   names(new.glmm.df)[ncol(glmm.df)+2]=paste("previous",nth.previous,"win.o",sep=".")
   names(new.glmm.df)[ncol(glmm.df)+3]=paste("previous",nth.previous,"loss.f",sep=".")
   names(new.glmm.df)[ncol(glmm.df)+4]=paste("previous",nth.previous,"loss.o",sep=".")
   names(new.glmm.df)[ncol(glmm.df)+5]=paste("previous",nth.previous,"money.f",sep=".")
   names(new.glmm.df)[ncol(glmm.df)+6]=paste("previous",nth.previous,"money.o",sep=".")
+  names(new.glmm.df)[ncol(glmm.df)+7]=paste("previous",nth.previous,"GDP.f",sep=".")
+  names(new.glmm.df)[ncol(glmm.df)+8]=paste("previous",nth.previous,"GDP.o",sep=".")
   return(new.glmm.df)
   
 }
