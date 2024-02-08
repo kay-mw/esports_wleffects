@@ -438,7 +438,7 @@ previous_interaction=function(glmm.df,nth.previous){
   names(new.glmm.df)[ncol(glmm.df)+7]=paste("previous",nth.previous,"GDP.f",sep=".")
   names(new.glmm.df)[ncol(glmm.df)+8]=paste("previous",nth.previous,"GDP.o",sep=".")
   return(new.glmm.df)
-  
+
 }
 
 glmm.esportdata$season=as.factor(glmm.esportdata$season)
