@@ -166,23 +166,18 @@ esport.data$begin_date <- as.Date(esport.data$begin_date)
 filtered_exchange_rates$consistent_date <- as.Date(anytime(filtered_exchange_rates$`TIME_PERIOD:Time period or range`))
 filtered_exchange_rates <- subset(filtered_exchange_rates,lubridate::year(consistent_date)>2015)
 
+######################################################################################
+# Join datasets to convert currency values
+######################################################################################
+
 # extract relevant columns
 exchange <- filtered_exchange_rates[c("currency_code","OBS_VALUE:Observation Value","consistent_date")]
 exchange <- exchange %>% rename(ObsValue=`OBS_VALUE:Observation Value`)
 exchange$ObsValue <- ifelse(exchange$ObsValue=="NaN",NA,exchange$ObsValue)
 exchange <- exchange %>% distinct(currency_code, consistent_date, .keep_all = TRUE)
 
-view(head(exchange, 100))
-
-######################################################################################
-# Join datasets to convert currency values
-######################################################################################
-
 merged_data <- esport.data %>%
   left_join(exchange, join_by("tournament.prizepool.currencycode" == "currency_code", closest(begin_date <= consistent_date)))
-
-# Inspect the merged dataset
-# view(head(merged_data, 100))
 
 # Make a column based on date diff calculation
 merged_data$date_diff <- difftime(merged_data$begin_date, merged_data$consistent_date, units = "days")
@@ -194,19 +189,130 @@ min(na.omit(merged_data$date_diff))
 # Convert prizepool amounts to USD using the exchange rates
 merged_data <- mutate(merged_data, prizepool_usd = tournament.prizepool.amount / ObsValue)
 
-# view data to inspect if conversion worked
-filter_test <- merged_data %>% filter(tournament.prizepool.currencycode != "USD")
+######################################################################################
+# Extract and categorize tournament stage info from tournament.name column
+######################################################################################
 
-# view(head(filter_test, 100))
+merged_data <- merged_data %>% mutate(tournament.stage = case_when(
+  grepl("Group", tournament.name) ~ "Group Stage",
+  grepl("Playoff", tournament.name) ~ "Playoffs",
+  grepl("playoff", tournament.name) ~ "Playoffs",
+  grepl("Final", tournament.name) ~ "Finals",
+  grepl("final", tournament.name) ~ "Finals",
+  grepl("Qualifier", tournament.name) ~ "Qualifiers",
+  grepl("Qualifier", tournament.name) ~ "Qualifiers",
+  grepl("Play-In", tournament.name) ~ "Play-Ins",
+  grepl("Play-in", tournament.name) ~ "Play-Ins",
+  grepl("Regular Season", tournament.name) ~ "Regular Season",
+  grepl("Regular season", tournament.name) ~ "Regular Season",
+  grepl("Placement", tournament.name) ~ "Placements",
+  .default = "Other"
+  )
+)
 
-#########################################################################################################
-#########################################################################################################
-#########################################################################################################
-#########################################################################################################
-#########################################################################################################
-#########################################################################################################
+unique(merged_data$tournament.stage)
 
-#take first 10000 rows
+view(head(merged_data, 10000))
+
+######################################################################################
+# Import, transform and merge GDP per capita data
+######################################################################################
+
+# Import
+GDP <- read_csv('historical_GDP.csv')
+
+# Transform
+GDP <- GDP %>% rename(country_name = `GDP per capita, current prices
+ (U.S. dollars per capita)`)
+
+# Historical exchange rates
+historical_exchange_rates <- separate(historical_exchange_rates, "REF_AREA:Reference area", 
+into = c("country_code", "country_name"), sep = ":", extra = "merge")
+
+historical_exchange_rates$consistent_date <- as.Date(anytime(historical_exchange_rates$`TIME_PERIOD:Time period or range`))
+historical_exchange_rates$year <- format(as.Date(historical_exchange_rates$consistent_date, format ="%Y/%m/%d"), "%Y")
+
+historical_exchange_rates <- subset(historical_exchange_rates, year > 2015)
+
+historical_exchange_rates$country_name <- trimws(historical_exchange_rates$country_name)
+
+view(head(historical_exchange_rates))
+
+# Have to manually change Turkey beforehand since its name had characters incompatible with case_when
+GDP$country_name <- replace(GDP$country_name, 182, "Türkiye")
+GDP$country_name <- replace(GDP$country_name, 170, "São Tomé and Príncipe")
+GDP$country_name <- replace(GDP$country_name, 46, "Côte d'Ivoire")
+view(GDP)
+
+GDP <- GDP %>% mutate(across(-c(country_name), as.numeric))
+
+GDP_long <- GDP %>% pivot_longer(cols = where(is.numeric), names_to = "year")
+
+GDP_long <- subset(GDP_long, year > 2015 & year < 2024)
+unique(GDP_long$year)
+
+GDP_long <- GDP_long %>% rename(GDP = value)
+
+unique(GDP_long$country_name)
+
+# Back to GDP dataset
+non_matching_countries <- setdiff(historical_exchange_rates$country_name, GDP_long$country_name)
+other_way <- setdiff(GDP_long$country_name, historical_exchange_rates$country_name)
+
+GDP_long <- GDP_long %>% mutate(country_name = case_when(
+  grepl("Slovak Republic", country_name) ~ "Slovakia",
+  grepl("China, People's Republic of", country_name) ~ "China",
+  grepl("Russian Federation", country_name) ~ "Russia",
+  grepl("Czech Republic", country_name) ~ "Czechia",
+  grepl("Bahamas, The", country_name) ~ "The Bahamas",
+  grepl("Congo, Republic of", country_name) ~ "Republic of Congo",
+  grepl("Korea, Republic of", country_name) ~ "Korea",
+  grepl("Congo, Dem. Rep. of the", country_name) ~ "Democratic Republic of the Congo",
+  grepl("Saint Vincent and the Grenadines", country_name) ~ "St Vincent and the Grenadines",
+  grepl("South Sudan, Republic of", country_name) ~ "South Sudan",
+  grepl("Saint Lucia", country_name) ~ "St Lucia",
+  grepl("Gambia, The", country_name) ~ "The Gambia",
+  grepl("Saint Kitts and Nevis", country_name) ~ "St Kitts and Nevis",
+  grepl("Brunei Darussalam", country_name) ~ "Brunei",
+  grepl("Lao P.D.R.", country_name) ~ "Laos",
+  grepl("Taiwan Province of China", country_name) ~ "Chinese Taipei",
+  .default = country_name
+  )
+)
+
+non_matching_countries <- setdiff(historical_exchange_rates$country_name, GDP_long$country_name)
+
+# Merge GDP and exchange to get country codes
+GDP_merge <- GDP_long %>% left_join(historical_exchange_rates, join_by("country_name", "year"), multiple = "any")
+
+GDP_merge <- GDP_merge[c("country_code", "country_name", "year", "GDP")]
+
+# Process merged esport.data
+merged_data$year <- format(as.Date(merged_data$begin_date, format ="%Y/%m/%d"), "%Y")
+
+# Merge
+main_GDP_merge <- merged_data %>%
+  left_join(GDP_merge, join_by("opponent_0.location" == "country_code", "year"), multiple = "any")
+
+main_GDP_merge <- main_GDP_merge %>% rename(
+  opp0_GDP = GDP, opp0_country_name = country_name, opp0_year = year
+)
+
+secondary_GDP_merge <- merged_data %>%
+  left_join(GDP_merge, join_by("opponent_1.location" == "country_code", "year"), multiple = "any")
+
+main_GDP_merge$opp1_year <- secondary_GDP_merge$year
+main_GDP_merge$opp1_country_name <- secondary_GDP_merge$country_name
+main_GDP_merge$opp1_GDP <- secondary_GDP_merge$GDP
+
+view(head(main_GDP_merge, 1000))
+
+# Now just need to add GDP data to this dataframe below.
+
+######################################################################################
+# Create new dataframe
+######################################################################################
+
 merged_data <- merged_data[1:10000,]
 
 R=nrow(merged_data)
@@ -219,7 +325,7 @@ for(i in 1:R){
     index=merged_data$index[i]
     season=merged_data$Season[i]
     tournament=merged_data$tournament_id[i]
-    stage=merged_data$tournament.name[i]
+    stage=merged_data$tournament.stage[i]
     match=merged_data$id[i]
     money=merged_data$prizepool_usd[i]
     tier=merged_data$tournament.tier[i]
@@ -238,7 +344,7 @@ for(i in 1:R){
     index=merged_data$index[i]
     season=merged_data$Season[i]
     tournament=merged_data$tournament_id[i]
-    stage=merged_data$tournament.name[i]
+    stage=merged_data$tournament.stage[i]
     match=merged_data$id[i]
     money=merged_data$prizepool_usd[i]
     tier=merged_data$tournament.tier[i]
@@ -262,6 +368,8 @@ for(i in 1:R){
 glmm.esportdata=do.call(rbind,glmm.esportdata)
 glmm.esportdata=as_tibble(glmm.esportdata)
 glmm.esportdata
+
+view(head(glmm.esportdata, 100))
 
 
 #########################################################################################
