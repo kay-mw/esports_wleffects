@@ -235,13 +235,13 @@ historical_exchange_rates <- subset(historical_exchange_rates, year > 2015)
 
 historical_exchange_rates$country_name <- trimws(historical_exchange_rates$country_name)
 
-view(head(historical_exchange_rates))
+# view(head(historical_exchange_rates))
 
 # Have to manually change Turkey beforehand since its name had characters incompatible with case_when
 GDP$country_name <- replace(GDP$country_name, 182, "Türkiye")
 GDP$country_name <- replace(GDP$country_name, 170, "São Tomé and Príncipe")
 GDP$country_name <- replace(GDP$country_name, 46, "Côte d'Ivoire")
-view(GDP)
+# view(GDP)
 
 GDP <- GDP %>% mutate(across(-c(country_name), as.numeric))
 
