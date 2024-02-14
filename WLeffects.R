@@ -314,10 +314,11 @@ main_GDP_merge$opp1_GDP <- secondary_GDP_merge$GDP
 # Create new dataframe
 ######################################################################################
 
-main_GDP_merge <- main_GDP_merge[1:10000,]
+# reduced dataset for testing
+# main_GDP_merge <- main_GDP_merge[1:10000,]
 
 R=nrow(main_GDP_merge)
-glmm.esportdata=vector(R,mode="list")
+glmm.esportdata.list=vector(R,mode="list")
 for(i in 1:R){
   main_GDP_merge$seq=seq(from=1,to=nrow(main_GDP_merge),by=1)
   previous.interactions=filter(main_GDP_merge,seq<i)
@@ -368,11 +369,11 @@ for(i in 1:R){
     
   }
   
-  glmm.esportdata[[i]]=data.frame(index,season,tournament,stage,match,money,tier,winner,focal,opponent,win.f,win.o,location.f,location.o,GDP.f,GDP.o)
+  glmm.esportdata.list[[i]]=data.frame(index,season,tournament,stage,match,money,tier,winner,focal,opponent,win.f,win.o,location.f,location.o,GDP.f,GDP.o)
 }
 
 
-glmm.esportdata=do.call(rbind,glmm.esportdata)
+glmm.esportdata=do.call(rbind,glmm.esportdata.list)
 glmm.esportdata=as_tibble(glmm.esportdata)
 glmm.esportdata
 
@@ -441,14 +442,14 @@ previous_interaction=function(glmm.df,nth.previous){
 
 }
 
-glmm.esportdata$season=as.factor(glmm.esportdata$season)
-glmm.esportdata$winner=as.factor(glmm.esportdata$winner)
-glmm.esportdata$focal=as.factor(glmm.esportdata$focal)
-glmm.esportdata$opponent=as.factor(glmm.esportdata$opponent)
+glmm.esportdata$season=as.character(glmm.esportdata$season)
+glmm.esportdata$winner=as.character(glmm.esportdata$winner)
+glmm.esportdata$focal=as.character(glmm.esportdata$focal)
+glmm.esportdata$opponent=as.character(glmm.esportdata$opponent)
 glmm.esportdata=split(glmm.esportdata,f = glmm.esportdata$season)
 
 # restrict to first 4 seasons for testing
-glmm.esportdata <- glmm.esportdata[1:4]
+# glmm.esportdata <- glmm.esportdata[1:4]
 
 glmm.esportdata=lapply(glmm.esportdata,previous_interaction,nth.previous=1)
 glmm.esportdata=do.call(rbind,glmm.esportdata)
@@ -493,12 +494,15 @@ WUC_previous.outcome=function(oneseason.glmmdata,nth.previous.interaction){
                                 previous.losses=unlist(c(all.interactions.f[,loss.f.index],all.interactions.o[,loss.o.index]))
     )
     
+
     team.win.mean[i]=mean(all.interactions$previous.wins,na.rm=TRUE)
     team.loss.mean[i]=mean(all.interactions$previous.losses,na.rm=TRUE)
+
   }
   
-  # print(hist(team.win.mean))
-  # print(hist(team.loss.mean))
+  print(all.teams)
+  print(all.interactions$previous.wins)
+  print(team.win.mean)
   
   team.win.mean=data.frame(all.teams,team.win.mean.f=team.win.mean)
   oneseason.glmmdata=left_join(oneseason.glmmdata,team.win.mean,by=c("focal"="all.teams"))
@@ -542,12 +546,8 @@ WUC_previous.outcome=function(oneseason.glmmdata,nth.previous.interaction){
 glmm.esportdata=split(glmm.esportdata,f = glmm.esportdata$season)
 glmm.esportdata=lapply(glmm.esportdata,WUC_previous.outcome,nth.previous.interaction=1)
 glmm.esportdata=do.call(rbind,glmm.esportdata)
-glmm.esportdata=as.tibble(glmm.esportdata)
+glmm.esportdata=as_tibble(glmm.esportdata)
 glmm.esportdata
-
-glmm.footienodraws=subset(glmm.esportdata,result!="D")
-glmm.footienodraws=as.tibble(glmm.footienodraws)
-glmm.footienodraws
 
 
 # first, model match outcomes as function of CURRENT situation
@@ -561,7 +561,7 @@ summary(model1)
 
 # now include effect of previous win/loss, separated from overall win/loss frequency
 ### POTENTIAL ISSUE: CURRENT GAME CONTRIBUTES TO TEAM.WIN.MEAN -- need to check with null data
-model2=glmer(win.f~home+
+model2=glmer(win.f~
                team.win.mean.1.f+team.win.dev.1.f+
                team.win.mean.1.o+team.win.dev.1.o+
                team.loss.mean.1.f+team.loss.dev.1.f+
