@@ -442,6 +442,9 @@ previous_interaction=function(glmm.df,nth.previous){
 }
 
 glmm.esportdata$season=as.factor(glmm.esportdata$season)
+glmm.esportdata$winner <- as.factor(glmm.esportdata$winner)
+glmm.esportdata$focal <- as.factor(glmm.esportdata$focal)
+glmm.esportdata$opponent <- as.factor(glmm.esportdata$opponent)
 glmm.esportdata=split(glmm.esportdata,f = glmm.esportdata$season)
 glmm.esportdata=lapply(glmm.esportdata,previous_interaction,nth.previous=1)
 glmm.esportdata=do.call(rbind,glmm.esportdata)
