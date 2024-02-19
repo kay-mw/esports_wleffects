@@ -315,7 +315,7 @@ main_GDP_merge$opp1_GDP <- secondary_GDP_merge$GDP
 ######################################################################################
 
 # reduced dataset for testing
-# main_GDP_merge <- main_GDP_merge[1:10000,]
+main_GDP_merge <- main_GDP_merge[1:10000,]
 
 R=nrow(main_GDP_merge)
 glmm.esportdata.list=vector(R,mode="list")
@@ -449,7 +449,7 @@ glmm.esportdata$opponent=as.character(glmm.esportdata$opponent)
 glmm.esportdata=split(glmm.esportdata,f = glmm.esportdata$season)
 
 # restrict to first 4 seasons for testing
-# glmm.esportdata <- glmm.esportdata[1:4]
+glmm.esportdata <- glmm.esportdata[1:4]
 
 glmm.esportdata=lapply(glmm.esportdata,previous_interaction,nth.previous=1)
 glmm.esportdata=do.call(rbind,glmm.esportdata)
@@ -550,9 +550,10 @@ glmm.esportdata=as_tibble(glmm.esportdata)
 glmm.esportdata
 
 
-# first, model match outcomes as function of CURRENT situation
-model1=glmer(win.f~home+
-               (1|focal)+(1|opponent),
+options(scipen=999) # display numbers in full
+
+# first, model match outcomes as function of focal and opponent IDs
+model1=glmer(win.f~(1|focal)+(1|opponent),
              family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
 )
@@ -564,14 +565,18 @@ summary(model1)
 model2=glmer(win.f~
                team.win.mean.1.f+team.win.dev.1.f+
                team.win.mean.1.o+team.win.dev.1.o+
-               team.loss.mean.1.f+team.loss.dev.1.f+
-               team.loss.mean.1.o+team.loss.dev.1.o+
+               # team.loss.mean.1.f+team.loss.dev.1.f+
+               # team.loss.mean.1.o+team.loss.dev.1.o+
                (1|focal)+(1|opponent),
              family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
 )
 
 summary(model2)
+
+ggplot(glmm.esportdata,aes(x=team.win.mean.1.o,y=win.f))+
+  geom_smooth(method=glm, method.args=list(family=binomial))+
+  theme_classic()
 
 # include interactions with previous match venue, to see if this influences WL effects
 model3=glmer(win.f~home+
