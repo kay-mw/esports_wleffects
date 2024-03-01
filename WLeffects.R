@@ -590,7 +590,9 @@ export_summs(
 )
  
 ggplot(glmm.esportdata,aes(x=team.win.mean.1.o,y=win.f))+
-  geom_smooth(method=glm, method.args=list(family=binomial))+
+  geom_smooth(method=glm, method.args=list(family=binomial),colour="red")+
+  geom_smooth(aes(x=team.win.mean.1.f),method=glm, method.args=list(family=binomial))+
+  xlab("proportion of wins in previous games")+ylab("probability that focal team wins")+
   theme_classic()
 
 # adjust prize money by GDP for prev encounter
@@ -661,6 +663,8 @@ model5=glmer(win.f~
 )
 
 summary(model5)
+exp(fixef(model5)) # odds ratios
+exp(confint(model5)) # 95% CI for odds ratios
 
 export_summs(
   model5,
