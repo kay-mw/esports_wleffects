@@ -4,6 +4,10 @@ require(MCMCglmm)
 require(parallel)
 require(data.table)
 require(anytime)
+require(jtools)
+require(broom.mixed)
+require(huxtable)
+require(emmeans)
 
 #################################################################################
 # read data file  ###############################################################
@@ -564,7 +568,7 @@ summary(model1)
 ### POTENTIAL ISSUE: CURRENT GAME CONTRIBUTES TO TEAM.WIN.MEAN -- need to check with null data
 model2=glmer(win.f~
                team.win.mean.1.f+team.win.dev.1.f+
-               team.win.mean.1.o+team.win.dev.1.o+
+               team.win.mean.1.o+#team.win.dev.1.o+
                # team.loss.mean.1.f+team.loss.dev.1.f+
                # team.loss.mean.1.o+team.loss.dev.1.o+
                (1|focal)+(1|opponent),
@@ -574,16 +578,31 @@ model2=glmer(win.f~
 
 summary(model2)
 
+export_summs(
+  model2,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/main_wl_effect.xlsx'
+)
+ 
 ggplot(glmm.esportdata,aes(x=team.win.mean.1.o,y=win.f))+
   geom_smooth(method=glm, method.args=list(family=binomial))+
   theme_classic()
 
-# include interactions with previous match venue, to see if this influences WL effects
-model3=glmer(win.f~home+
-               team.win.mean.1.f+previous.1.home.f*team.win.dev.1.f+
-               team.win.mean.1.o+previous.1.home.o*team.win.dev.1.o+
-               team.loss.mean.1.f+previous.1.home.f*team.loss.dev.1.f+
-               team.loss.mean.1.o+previous.1.home.o*team.loss.dev.1.o+
+# adjust prize money by GDP for prev encounter
+glmm.esportdata <- glmm.esportdata %>%
+  mutate(previous.1.moneyadj.f = previous.1.money.f/previous.1.GDP.f)
+
+# winner effect * prize money (GDP adj.) from previous interaction
+model3=glmer(win.f~
+               team.win.mean.1.f+team.win.dev.1.f*previous.1.moneyadj.f+
+               team.win.mean.1.o+#team.win.dev.1.o+
+              #  team.loss.mean.1.o+team.loss.dev.1.o+
+              #  team.loss.mean.1.f+team.loss.dev.1.f+
                (1|focal)+(1|opponent),
              family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
@@ -591,12 +610,27 @@ model3=glmer(win.f~home+
 
 summary(model3)
 
-# include interactions with previous goal margin, to see if this influences WL effects
-model4=glmer(win.f~home+
-               team.win.mean.1.f+previous.1.margin.f*team.win.dev.1.f+
-               team.win.mean.1.o+previous.1.margin.o*team.win.dev.1.o+
-               team.loss.mean.1.f+previous.1.margin.f*team.loss.dev.1.f+
-               team.loss.mean.1.o+previous.1.margin.o*team.loss.dev.1.o+
+export_summs(
+  model3,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/wl_prev_money_interaction.xlsx'
+)
+
+# adjust prize money by GDP for current encounter
+glmm.esportdata <- glmm.esportdata %>% 
+  mutate(moneyadj.f = money/GDP.f)
+
+# winner effect * prize money (GDP adj.) from current encounter
+model4=glmer(win.f~
+               team.win.mean.1.f+team.win.dev.1.f*moneyadj.f+
+               team.win.mean.1.o+#team.win.dev.1.o+
+              #  team.loss.mean.1.o+team.loss.dev.1.o+
+              #  team.loss.mean.1.f+team.loss.dev.1.f+
                (1|focal)+(1|opponent),
              family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
@@ -604,16 +638,202 @@ model4=glmer(win.f~home+
 
 summary(model4)
 
+export_summs(
+  model4,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/wl_current_money_interaction.xlsx'
+)
 
-# include interactions with previous goal margin and previous venue, to see if this influences WL effects
-model5=glmer(win.f~home+
-               team.win.mean.1.f+previous.1.home.f*previous.1.margin.f*team.win.dev.1.f+
-               team.win.mean.1.o+previous.1.home.o*previous.1.margin.o*team.win.dev.1.o+
-               team.loss.mean.1.f+previous.1.home.f*previous.1.margin.f*team.loss.dev.1.f+
-               team.loss.mean.1.o+previous.1.home.o*previous.1.margin.o*team.loss.dev.1.o+
+# winner effect * tournament tier from current encounter
+model5=glmer(win.f~
+               team.win.mean.1.f+team.win.dev.1.f*tier+
+               team.win.mean.1.o+#team.win.dev.1.o+
+              #  team.loss.mean.1.o+team.loss.dev.1.o+
+              #  team.loss.mean.1.f+team.loss.dev.1.f+
                (1|focal)+(1|opponent),
              family="binomial",data=glmm.esportdata,
              control=glmerControl(optimizer="bobyqa")
 )
 
 summary(model5)
+
+export_summs(
+  model5,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/placeholder.xlsx'
+)
+
+# trying some pairwise comparisons, not sure if its working
+EMM <- emmeans(model5, ~tier)
+pairs(EMM)
+
+# winer effect * tournament stage from current encounter
+model6=glmer(win.f~
+               team.win.mean.1.f+team.win.dev.1.f*stage+
+               team.win.mean.1.o+#team.win.dev.1.o+
+              #  team.loss.mean.1.o+team.loss.dev.1.o+
+              #  team.loss.mean.1.f+team.loss.dev.1.f+
+               (1|focal)+(1|opponent),
+             family="binomial",data=glmm.esportdata,
+             control=glmerControl(optimizer="bobyqa")
+)
+
+summary(model6)
+
+export_summs(
+  model6,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/placeholder.xlsx'
+)
+
+EMM <- emmeans(model6, ~stage)
+pairs(EMM)
+
+# winner effect * focal team location from current encounter
+model7=glmer(win.f~
+               team.win.mean.1.f+team.win.dev.1.f*location.f+
+               team.win.mean.1.o+#team.win.dev.1.o+
+              #  team.loss.mean.1.o+team.loss.dev.1.o+
+              #  team.loss.mean.1.f+team.loss.dev.1.f+
+               (1|focal)+(1|opponent),
+             family="binomial",data=glmm.esportdata,
+             control=glmerControl(optimizer="bobyqa")
+)
+
+summary(model7)
+
+export_summs(
+  model7,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/placeholder.xlsx'
+)
+
+EMM <- emmeans(model7, ~location.f)
+pairs(EMM)
+
+# winner effect * season
+model8=glmer(win.f~
+               team.win.mean.1.f+team.win.dev.1.f*season+
+               team.win.mean.1.o+#team.win.dev.1.o+
+              #  team.loss.mean.1.o+team.loss.dev.1.o+
+              #  team.loss.mean.1.f+team.loss.dev.1.f+
+               (1|focal)+(1|opponent),
+             family="binomial",data=glmm.esportdata,
+             control=glmerControl(optimizer="bobyqa")
+)
+
+summary(model8)
+
+export_summs(
+  model8,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/wl_season_interaction.xlsx'
+)
+
+# winner effect * GDP
+glmm.esportdata <- glmm.esportdata %>% 
+  mutate(GDP.reduced = GDP.f/10000)
+
+model9=glmer(win.f~
+               team.win.mean.1.f+team.win.dev.1.f*GDP.reduced+
+               team.win.mean.1.o+#team.win.dev.1.o+
+              #  team.loss.mean.1.o+team.loss.dev.1.o+
+              #  team.loss.mean.1.f+team.loss.dev.1.f+
+               (1|focal)+(1|opponent),
+             family="binomial",data=glmm.esportdata,
+             control=glmerControl(optimizer="bobyqa")
+)
+
+summary(model9)
+
+export_summs(
+  model9,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/wl_GDP_interaction.xlsx'
+)
+
+view(head(glmm.esportdata))
+
+# winner effect * prize money from current encounter
+glmm.esportdata <- glmm.esportdata %>% 
+  mutate(money.reduced = money/100000)
+
+model10=glmer(win.f~
+               team.win.mean.1.f+team.win.dev.1.f*money.reduced+
+               team.win.mean.1.o+#team.win.dev.1.o+
+              #  team.loss.mean.1.o+team.loss.dev.1.o+
+              #  team.loss.mean.1.f+team.loss.dev.1.f+
+               (1|focal)+(1|opponent),
+             family="binomial",data=glmm.esportdata,
+             control=glmerControl(optimizer="bobyqa")
+)
+
+summary(model10)
+
+export_summs(
+  model10,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/wl_money_interaction.xlsx'
+)
+
+# winner effect * prize money from prev encounter
+glmm.esportdata <- glmm.esportdata %>% 
+  mutate(prev.money.reduced.f = previous.1.money.f/100000)
+
+model11=glmer(win.f~
+               team.win.mean.1.f+team.win.dev.1.f*prev.money.reduced.f+
+               team.win.mean.1.o+#team.win.dev.1.o+
+              #  team.loss.mean.1.o+team.loss.dev.1.o+
+              #  team.loss.mean.1.f+team.loss.dev.1.f+
+               (1|focal)+(1|opponent),
+             family="binomial",data=glmm.esportdata,
+             control=glmerControl(optimizer="bobyqa")
+)
+
+summary(model11)
+
+export_summs(
+  model11,
+  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_pos = c("right"),
+  digits = 3,
+  statistics = character(0),
+  pvals = TRUE,
+  to.file = 'xlsx',
+  file.name = './tables/placeholder.xlsx'
+)
