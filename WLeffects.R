@@ -595,6 +595,13 @@ ggplot(glmm.esportdata,aes(x=team.win.mean.1.o,y=win.f))+
   xlab("proportion of wins in previous games")+ylab("probability that focal team wins")+
   theme_classic()
 
+ggplot(glmm.esportdata,aes(x=team.win.dev.1.o,y=win.f))+
+  geom_smooth(method=glm, method.args=list(family=binomial),colour="red")+
+  geom_smooth(aes(x=team.win.dev.1.f),method=glm, method.args=list(family=binomial))+
+  xlab("win/loss deviation in previous game")+ylab("probability that focal team wins")+
+  ylim(c(0,1))+
+  theme_classic()
+
 # adjust prize money by GDP for prev encounter
 glmm.esportdata <- glmm.esportdata %>%
   mutate(previous.1.moneyadj.f = previous.1.money.f/previous.1.GDP.f)
