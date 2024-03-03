@@ -823,13 +823,36 @@ export_summs(
   file.name = './tables/wl_money_interaction.xlsx'
 )
 
+set_theme(
+  base = theme_classic()
+)
+
 plot_int <- plot_model(
   model10,
   terms = c("team.win.dev.1.f [all]", "money.reduced [0, 1, 2.5, 5]"),
   type = "pred",
-  axis.lim = c(0, 1)
+  axis.lim = c(0.25, 0.75),
+  colors = "Dark2",
+  axis.title = c("Winner Effect", "Odds of Focal Team Winning"),
+  title = "",
+  legend.title = "Tournament Prize Money ($USD)"
 )
 
+plot_int$data$group <- case_when(
+    plot_int$data$group == "0" ~ "0",
+    plot_int$data$group == "1" ~ "100000",
+    plot_int$data$group == "2.5" ~ "250000",
+    plot_int$data$group == "5" ~ "500000"
+  )
+
+plot_int$data$group_col <- case_when(
+    plot_int$data$group_col == "0" ~ "0",
+    plot_int$data$group_col == "1" ~ "100000",
+    plot_int$data$group_col == "2.5" ~ "250000",
+    plot_int$data$group_col == "5" ~ "500000"
+  )
+
+save_plot("test.png", plot_int)
 print(plot_int)
 
 # winner effect * prize money from prev encounter
