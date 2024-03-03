@@ -8,7 +8,6 @@ require(jtools)
 require(broom.mixed)
 require(huxtable)
 require(emmeans)
-require(sjPlot)
 
 #################################################################################
 # read data file  ###############################################################
@@ -823,45 +822,12 @@ export_summs(
   file.name = './tables/wl_money_interaction.xlsx'
 )
 
-plot_minmax <- plot_model(
-  model10, 
-  type = "int", 
-  mdrt.values = "minmax"
+plot_int <- plot_model(
+  model10,
+  terms = c("team.win.dev.1.f [all]", "money.reduced [0, 1, 2.5, 5]"),
+  type = "pred",
+  axis.lim = c(0, 1)
 )
-
-plot_meansd <- plot_model(
-  model10, 
-  type = "int", 
-  mdrt.values = "meansd"
-)
-
-data_minmax <- plot_minmax$data
-data_meansd <- plot_meansd$data
-
-plot_minmax$data <- plots_merged
-
-print(plot_minmax)
-
-plots_merged <- merge(data_minmax, data_meansd, by = "x")
-
-ggplot(plots_merged, aes(x = x, y = predicted.y, color = group.y)) +
-  geom_line(aes(linetype = group.y), size = 1) +
-  geom_ribbon(aes(ymin = conf.low.y, ymax = conf.high.y, fill = group.y), alpha = 0.3) +
-  geom_line(aes(linetype = group.x), size = 1) +
-  geom_ribbon(aes(ymin = conf.low.x, ymax = conf.high.x, fill = group.x), alpha = 0.3) +
-  labs(title = "Customized Plot",
-       x = "X-Axis Label",
-       y = "Y-Axis Label",
-       color = "Group",
-       linetype = "Group",
-       fill = "Group") +
-  theme_minimal()
-
-str(plots_merged)
-
-# plot_int + scale_y_continuous(limits = c(0, 1))
-
-# print(plot_int)
 
 # winner effect * prize money from prev encounter
 glmm.esportdata <- glmm.esportdata %>% 
