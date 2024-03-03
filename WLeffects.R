@@ -8,6 +8,7 @@ require(jtools)
 require(broom.mixed)
 require(huxtable)
 require(emmeans)
+require(sjPlot)
 
 #################################################################################
 # read data file  ###############################################################
@@ -828,6 +829,8 @@ plot_int <- plot_model(
   type = "pred",
   axis.lim = c(0, 1)
 )
+
+print(plot_int)
 
 # winner effect * prize money from prev encounter
 glmm.esportdata <- glmm.esportdata %>% 
