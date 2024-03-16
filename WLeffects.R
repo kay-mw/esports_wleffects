@@ -311,7 +311,7 @@ main_GDP_merge$opp1_year <- secondary_GDP_merge$year
 main_GDP_merge$opp1_country_name <- secondary_GDP_merge$country_name
 main_GDP_merge$opp1_GDP <- secondary_GDP_merge$GDP
 
-# view(head(main_GDP_merge, 1000))
+view(head(main_GDP_merge, 1000))
 
 # Now just need to add GDP data to this dataframe below.
 
@@ -320,7 +320,7 @@ main_GDP_merge$opp1_GDP <- secondary_GDP_merge$GDP
 ######################################################################################
 
 # reduced dataset for testing
-main_GDP_merge <- main_GDP_merge[1:10000,]
+# main_GDP_merge <- main_GDP_merge[1:10000,]
 
 R=nrow(main_GDP_merge)
 glmm.esportdata.list=vector(R,mode="list")
@@ -569,7 +569,7 @@ summary(model1)
 ### POTENTIAL ISSUE: CURRENT GAME CONTRIBUTES TO TEAM.WIN.MEAN -- need to check with null data
 model2=glmer(win.f~
                team.win.mean.1.f+team.win.dev.1.f+
-               team.win.mean.1.o+#team.win.dev.1.o+
+               team.win.mean.1.o+team.win.dev.1.o+
                # team.loss.mean.1.f+team.loss.dev.1.f+
                # team.loss.mean.1.o+team.loss.dev.1.o+
                (1|focal)+(1|opponent),
@@ -581,7 +581,7 @@ summary(model2)
 
 export_summs(
   model2,
-  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_format = "{statistic}, {std.error}, {conf.low}, {conf.high}, {p.value}",
   error_pos = c("right"),
   digits = 3,
   statistics = character(0),
@@ -590,18 +590,23 @@ export_summs(
   file.name = './tables/main_wl_effect.xlsx'
 )
  
-ggplot(glmm.esportdata,aes(x=team.win.mean.1.o,y=win.f))+
+# ggplot(glmm.esportdata,aes(x=team.win.mean.1.o,y=win.f))+
+#   geom_smooth(method=glm, method.args=list(family=binomial),colour="red")+
+#   geom_smooth(aes(x=team.win.mean.1.f),method=glm, method.args=list(family=binomial))+
+#   xlab("proportion of wins in previous games")+ylab("probability that focal team wins")+
+#   theme_classic()
+
+winner_vs_loser <- ggplot(glmm.esportdata,aes(x=team.win.dev.1.f,y=win.f))+
   geom_smooth(method=glm, method.args=list(family=binomial),colour="red")+
-  geom_smooth(aes(x=team.win.mean.1.f),method=glm, method.args=list(family=binomial))+
-  xlab("proportion of wins in previous games")+ylab("probability that focal team wins")+
+  xlab("Focal Team Win/Loss Deviation in Prev. Game")+ylab("Probability Focal Team Wins the Current Game")+
+  ylim(c(0,1)) + 
   theme_classic()
 
-ggplot(glmm.esportdata,aes(x=team.win.dev.1.o,y=win.f))+
-  geom_smooth(method=glm, method.args=list(family=binomial),colour="red")+
-  geom_smooth(aes(x=team.win.dev.1.f),method=glm, method.args=list(family=binomial))+
-  xlab("win/loss deviation in previous game")+ylab("probability that focal team wins")+
-  ylim(c(0,1))+
-  theme_classic()
+winner_vs_loser <- winner_vs_loser + theme(axis.title = element_text(size = 10))
+ggsave("main_wl_effect.png", winner_vs_loser, width=2000, height=2000, units="px", dpi="retina")
+
+exp(fixef(model2)) # odds ratios
+exp(confint(model2)) # 95% CI for odds ratios
 
 # adjust prize money by GDP for prev encounter
 glmm.esportdata <- glmm.esportdata %>%
@@ -671,8 +676,6 @@ model5=glmer(win.f~
 )
 
 summary(model5)
-exp(fixef(model5)) # odds ratios
-exp(confint(model5)) # 95% CI for odds ratios
 
 export_summs(
   model5,
@@ -814,7 +817,7 @@ summary(model10)
 
 export_summs(
   model10,
-  error_format = "{std.error}, {conf.low}, {conf.high}, {p.value}",
+  error_format = "{statistic}, {std.error}, {conf.low}, {conf.high}, {p.value}",
   error_pos = c("right"),
   digits = 3,
   statistics = character(0),
@@ -827,33 +830,24 @@ set_theme(
   base = theme_classic()
 )
 
-plot_int <- plot_model(
+plot_int_sds <- plot_model(
   model10,
-  terms = c("team.win.dev.1.f [all]", "money.reduced [0, 1, 2.5, 5]"),
+  terms = c("team.win.dev.1.f [all]", "money.reduced [0, 0.198, 1.16, 2.11]"),
   type = "pred",
-  axis.lim = c(0.25, 0.75),
-  colors = "Dark2",
-  axis.title = c("Winner Effect", "Odds of Focal Team Winning"),
+  axis.lim = c(0, 1),
+  axis.title = c("Focal Team Win/Loss Deviation in Prev. Game", "Probability Focal Team Wins the Current Game"),
   title = "",
-  legend.title = "Tournament Prize Money ($USD)"
+  legend.title = "Prize Money"
 )
 
-plot_int$data$group <- case_when(
-    plot_int$data$group == "0" ~ "0",
-    plot_int$data$group == "1" ~ "100000",
-    plot_int$data$group == "2.5" ~ "250000",
-    plot_int$data$group == "5" ~ "500000"
-  )
+plot_int_sds <- plot_int_sds + 
+  scale_colour_brewer(palette = "Dark2", labels = c("$0", "$19,800", "$116,000", "$211,000")) +
+  theme(axis.text.x = element_text(colour = "black"), axis.line.x = element_line(colour = "black")) +
+  theme(axis.text.y = element_text(colour = "black"), axis.line.y = element_line(colour = "black")) +
+  theme(axis.title.x = element_text(colour = "black"), axis.title.y = element_text(colour = "black")) +
+  theme(legend.text = element_text(colour = "black"))
 
-plot_int$data$group_col <- case_when(
-    plot_int$data$group_col == "0" ~ "0",
-    plot_int$data$group_col == "1" ~ "100000",
-    plot_int$data$group_col == "2.5" ~ "250000",
-    plot_int$data$group_col == "5" ~ "500000"
-  )
-
-save_plot("test.png", plot_int)
-print(plot_int)
+ggsave("wl_money_interaction.png", plot_int_sds, dpi="retina")
 
 # winner effect * prize money from prev encounter
 glmm.esportdata <- glmm.esportdata %>% 

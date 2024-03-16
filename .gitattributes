@@ -1,1 +1,2 @@
-*.RData filter=lfs diff=lfs merge=lfs -text
+model_1-11.RData filter=lfs diff=lfs merge=lfs -text
+historical_exchange_rates.csv filter=lfs diff=lfs merge=lfs -text
