@@ -7,7 +7,7 @@ load_dotenv()
 
 headers = {
     "accept": "application/json",
-    "authorization": f"Bearer {os.environ[API_KEY]}"
+    "authorization": f"Bearer {os.environ['API_KEY']}"
 }
 
 response = []
@@ -26,6 +26,7 @@ for item in response:
 
 
 df = pd.json_normalize(response)
+print(df)
 df.drop(columns=['opponents','modified_at','slug','streams_list','live.opens_at','live.supported','live.url',
                  'videogame_title.slug','videogame.slug','winner.image_url','winner.modified_at','winner.slug',
                  'serie.modified_at','serie.slug','tournament.detailed_stats','tournament.live_supported',
