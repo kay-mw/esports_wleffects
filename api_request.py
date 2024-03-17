@@ -1,13 +1,17 @@
 import requests
+from dotenv import load_dotenv
+import os
 import pandas as pd
+
+load_dotenv()
 
 headers = {
     "accept": "application/json",
-    "authorization": "Bearer V6AgJUND-4v26c2PFZTRu2_V4yJ9GvZTMar1I9fe6RhRTFCnW9o"
+    "authorization": f"Bearer {os.environ[API_KEY]}"
 }
 
 response = []
-for page in range(1,600):
+for page in range(1,2):
     url = "https://api.pandascore.co/csgo/matches/past?per_page=100&filter%5Bstatus%5D=finished&page="+str(page)
     page_response = requests.get(url, headers=headers).json()
     response.extend(page_response)
