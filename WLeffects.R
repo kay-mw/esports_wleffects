@@ -5,9 +5,8 @@ require(parallel)
 require(data.table)
 require(anytime)
 require(jtools)
-require(broom.mixed)
-require(huxtable)
-require(emmeans)
+# require(broom.mixed)
+# require(huxtable)
 require(sjPlot)
 
 #################################################################################
@@ -832,7 +831,7 @@ set_theme(
 
 plot_int_sds <- plot_model(
   model10,
-  terms = c("team.win.dev.1.f [all]", "money.reduced [0, 0.198, 1.16, 2.11]"),
+  terms = c("team.win.dev.1.f [all]", "money.reduced [0, 1, 2, 5, 14]"),
   type = "pred",
   axis.lim = c(0, 1),
   axis.title = c("Focal Team Win/Loss Deviation in Prev. Game", "Probability Focal Team Wins the Current Game"),
@@ -841,7 +840,7 @@ plot_int_sds <- plot_model(
 )
 
 plot_int_sds <- plot_int_sds + 
-  scale_colour_brewer(palette = "Dark2", labels = c("$0", "$19,800", "$116,000", "$211,000")) +
+  scale_colour_brewer(palette = "Dark2", labels = c("$0 (min)", "$100,000", "$200,000", "$500,000", "$1,400,000 (max)")) +
   theme(axis.text.x = element_text(colour = "black"), axis.line.x = element_line(colour = "black")) +
   theme(axis.text.y = element_text(colour = "black"), axis.line.y = element_line(colour = "black")) +
   theme(axis.title.x = element_text(colour = "black"), axis.title.y = element_text(colour = "black")) +
